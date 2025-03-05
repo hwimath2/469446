@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>휘매쓰 연산 챌린지!</title>
+  <!-- MathJax 로드 -->
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" defer></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    header {
+      background-color: #4CAF50;
+      width: 100%;
+      padding: 20px;
+      text-align: center;
+      color: white;
+      font-size: 2em;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 90%;
+      max-width: 800px;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .hidden {
+      display: none;
+    }
+    .difficulty-selection button {
+      padding: 15px 30px;
+      margin: 10px;
+      font-size: 1.2em;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .difficulty-selection button:hover {
+      background-color: #45a049;
+      color: white;
+    }
+    .difficulty-selection button:nth-child(1) { background-color: #ff4d4d; color: white; }
+    .difficulty-selection button:nth-child(2) { background-color: #ff944d; color: white; }
+    .difficulty-selection button:nth-child(3) { background-color: #ffda4d; color: white; }
+    .difficulty-selection button:nth-child(4) { background-color: #a3ff4d; color: white; }
+    .game-screen {
+      width: 100%;
+    }
+    .scoreboard, .chances, .total-time {
+      font-size: 1.2em;
+      margin: 10px 0;
+    }
+    .energy-bar-container {
+      width: 100%;
+      background-color: #ddd;
+      border-radius: 25px;
+      overflow: hidden;
+      margin: 20px 0;
+      height: 25px;
+    }
+    .energy-bar {
+      height: 100%;
+      width: 100%;
+      background-color: #4CAF50;
+      transition: width 0.5s linear;
+    }
+    .question {
+      font-size: 1.5em;
+      margin: 20px 0;
+      text-align: center;
+    }
+    .choices {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+    }
+    .choices button {
+      padding: 15px;
+      margin: 10px 0;
+      font-size: 1.2em;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      background-color: #ffffff;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .choices button:hover {
+      background-color: #f1f1f1;
+    }
+    .popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      border: 2px solid #4CAF50;
+      border-radius: 10px;
+      padding: 20px;
+      z-index: 1000;
+      text-align: center;
+    }
+    .popup button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      font-size: 1em;
+      border: none;
+      border-radius: 5px;
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+    }
+    .popup button:hover {
+      background-color: #45a049;
+    }
+    /* Modal background */
+    .modal-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      z-index: 999;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <header>휘매쓰 연산 챌린지!</header>
+  <div class="container">
+    <!-- 시작 화면 -->
+    <div id="start-screen" class="game-screen">
+      <h2>난이도를 선택하세요</h2>
+      <div>
+        <label for="player-name">이름 입력: </label>
+        <input type="text" id="player-name" placeholder="이름을 입력하세요">
+      </div>
+      <div class="difficulty-selection">
+        <button data-difficulty="최상">최상 (20초)</button>
+        <button data-difficulty="상">상 (30초)</button>
+        <button data-difficulty="중">중 (40초)</button>
+        <button data-difficulty="하">하 (시간제한 없음)</button>
+      </div>
+    </div>
+
+    <!-- 게임 화면 -->
+    <div id="game-screen" class="game-screen hidden">
+      <div class="scoreboard">점수: <span id="score">0</span></div>
+      <div class="chances">남은 기회: <span id="chances">3</span></div>
+      <div class="total-time">전체 시간: <span id="total-time">00:00</span></div>
+      <div class="energy-bar-container">
+        <div id="energy-bar" class="energy-bar"></div>
+      </div>
+      <div class="question" id="question">질문이 여기에 표시됩니다.</div>
+      <div class="choices" id="choices">
+        <!-- 선택지가 여기에 표시됩니다 -->
+      </div>
+    </div>
+
+    <!-- 결과 화면 -->
+    <div id="result-screen" class="game-screen hidden">
+      <h2>게임 종료!</h2>
+      <p>최종 점수: <span id="final-score">0</span></p>
+      <p>경과 시간: <span id="final-time">00:00</span></p>
+      <button id="submit-data">전송하기</button>
+      <button id="restart-button">다시 시작하기</button>
+      <div id="response"></div>
+    </div>
+  </div>
+
+  <!-- 팝업 -->
+  <div id="popup" class="popup hidden">
+    <p id="popup-message">팝업 메시지</p>
+    <button onclick="closePopup()">확인</button>
+  </div>
+  <div id="modal-bg" class="modal-bg"></div>
+
+  <script>
+    // 모든 문제와 답을 포함한 데이터
+    const problems = [
+      {id:1, expression: '5^2', answer: '25'},
+      {id:2, expression:'(-3)^3', answer:'-27'},
+      {id:3, expression:'-1^{10}', answer:'-1'},
+      {id:4, expression:'\\left(\\frac{1}{3}\\right)^2', answer:'\\dfrac{1}{9}'},
+      {id:5, expression:'\\left(-\\frac{3}{4}\\right)^2', answer:'\\dfrac{9}{16}'},
+      {id:6, expression:'-\\left(-\\frac{1}{2}\\right)^2', answer:'-\\dfrac{1}{4}'},
+      {id:7, expression:'(+3)^3', answer:'27'},
+      {id:8, expression:'(-4)^2', answer:'16'},
+      {id:9, expression:'(-4)^3', answer:'-64'},
+      {id:10, expression:'+2^2', answer:'4'},
+      {id:11, expression:'-2^2', answer:'-4'},
+      {id:12, expression:'\\left(+\\frac{1}{8}\\right)^3', answer:'\\dfrac{1}{512}'},
+      {id:13, expression:'\\left(-\\frac{1}{8}\\right)^3', answer:'-\\dfrac{1}{512}'},
+      {id:14, expression:'\\left(-\\frac{3}{2}\\right)^2', answer:'\\dfrac{9}{4}'},
+      {id:15, expression:'\\left(-\\frac{5}{3}\\right)^3', answer:'-\\dfrac{125}{27}'},
+      {id:16, expression:'-(-1)^5', answer:'1'},
+      {id:17, expression:'\\left(-\\frac{2}{3}\\right)^3', answer:'-\\dfrac{8}{27}'},
+      {id:18, expression:'\\left(-\\frac{1}{2}\\right)^3', answer:'-\\dfrac{1}{8}'},
+      {id:19, expression:'\\left(-\\frac{1}{2}\\right)^2', answer:'\\dfrac{1}{4}'},
+      {id:20, expression:'-3^2', answer:'-9'},
+      {id:21, expression:'3^2 \\times 7', answer:'63'},
+      {id:22, expression:'2^3 \\times (-3)^2', answer:'72'},
+      {id:23, expression:'\\left(\\frac{3}{2}\\right)^3 \\times \\left(\\frac{4}{3}\\right)^2', answer:'6'},
+      {id:24, expression:'\\left(\\frac{3}{10}\\right)^2 \\times \\left(-\\frac{5}{6}\\right)^3', answer:'-\\dfrac{5}{96}'},
+      {id:25, expression:'-2^3 \\times (+3)^2', answer:'-72'},
+      {id:26, expression:'-4^2 \\times (-1)^{99}', answer:'16'},
+      {id:27, expression:'(-3)^2 \\times \\left(\\frac{2}{3}\\right)^3', answer:'\\dfrac{8}{3}'},
+      {id:28, expression:'\\left(-\\frac{1}{3}\\right) \\div \\left(-\\frac{1}{3}\\right)^3', answer:'9'},
+      {id:29, expression:'(-3)^4 \\times \\left(-\\frac{1}{3}\\right)^3', answer:'-3'},
+      {id:30, expression:'(-1)^{101} \\times \\left(-\\frac{7}{5}\\right)', answer:'\\dfrac{7}{5}'},
+      {id:31, expression:'(-0.2) \\times \\left(-\\frac{1}{3}\\right)^5', answer:'\\dfrac{1}{1215}'},
+      {id:32, expression:'\\left(-\\frac{1}{2}\\right)^3 \\times (-1.2)', answer:'0.15'},
+      {id:33, expression:'(-1^2) \\times \\dfrac{2}{3} \\times \\left(-\\frac{5}{2}\\right)^2', answer:'-\\dfrac{25}{6}'},
+      {id:34, expression:'(-2)^3 \\times (-6)', answer:'48'},
+      {id:57, expression:'(-2)^3 \\times (-1)^3 \\div \\left(-\\dfrac{8}{3}\\right)', answer:'-3'},
+      {id:58, expression:'(-2)^3 \\times \\dfrac{3}{4} \\div \\left(-\\dfrac{3}{2}\\right)^2', answer:'-\\dfrac{8}{3}'},
+      {id:59, expression:'(-2)^3 \\div \\dfrac{3}{4} \\times \\left(-\\dfrac{3}{2}\\right)^2', answer:'-24'},
+      {id:60, expression:'(-2)^2 - 2^2 + (-2)^3 - 2^3', answer:'-16'},
+      {id:61, expression:'(-3)^3 \\times (-2)^2 \\times \\left(-\\dfrac{1}{3}\\right)^2 \\div (-6)', answer:'2'},
+      {id:62, expression:'(-2)^2 \\times \\left(-\\dfrac{5}{2}\\right)^2 \\div \\dfrac{5}{2}', answer:'10'},
+      {id:65, expression:'(-1)^{2018} \\times 2 - (-1)^{2017} \\times (-4)', answer:'-2'},
+      {id:66, expression:'(-1)^{10} - (-1)^{11} - (-1)^{13} - 1^9 \\times (-1)^3', answer:'4'},
+    ];
+    
+    let score = 0;
+    let chances = 3;
+    let totalTime = 0;
+    let selectedDifficulty = '하';
+    let usedProblems = [];
+    let timerInterval;
+    let energyInterval;
+    let totalTimerInterval;
+    let energyDuration = 0; // in seconds
+    let energyRemaining = 100; // percentage
+    let isTimeLimited = false;
+    
+    // 난이도별 설정
+    const difficultySettings = {
+      '최상': {time: 20, points: 20},
+      '상': {time: 30, points: 15},
+      '중': {time: 40, points: 13},
+      '하': {time: 0, points: 10} // 0은 시간 제한 없음
+    };
+    
+    const scoreElement = document.getElementById('score');
+    const chancesElement = document.getElementById('chances');
+    const totalTimeElement = document.getElementById('total-time');
+    const questionElement = document.getElementById('question');
+    const choicesElement = document.getElementById('choices');
+    const energyBar = document.getElementById('energy-bar');
+    const startScreen = document.getElementById('start-screen');
+    const gameScreen = document.getElementById('game-screen');
+    const resultScreen = document.getElementById('result-screen');
+    const finalScoreElement = document.getElementById('final-score');
+    const restartButton = document.getElementById('restart-button');
+    const popup = document.getElementById('popup');
+    const popupMessage = document.getElementById('popup-message');
+    const modalBg = document.getElementById('modal-bg');
+    
+    choicesElement.addEventListener('click', function(e) {
+      if (e.target.tagName === 'BUTTON') {
+        const selectedAnswer = e.target.getAttribute('data-answer');
+        checkAnswer(selectedAnswer);
+      }
+    });
+    
+    document.querySelectorAll('.difficulty-selection button').forEach(button => {
+      button.addEventListener('click', function() {
+        selectedDifficulty = this.getAttribute('data-difficulty');
+        startGame();
+      });
+    });
+    
+    restartButton.addEventListener('click', function() {
+      resetGame();
+      startScreen.classList.remove('hidden');
+      resultScreen.classList.add('hidden');
+    });
+    
+    function startGame() {
+      startScreen.classList.add('hidden');
+      gameScreen.classList.remove('hidden');
+      score = 0;
+      chances = 3;
+      totalTime = 0;
+      usedProblems = [];
+      updateScore();
+      updateChances();
+      updateTotalTime();
+      setupDifficulty();
+      startTotalTimer();
+      loadNextProblem();
+    }
+    
+    function resetGame() {
+      clearInterval(timerInterval);
+      clearInterval(energyInterval);
+      clearInterval(totalTimerInterval);
+    }
+    
+    function setupDifficulty() {
+      const settings = difficultySettings[selectedDifficulty];
+      if (settings.time > 0) {
+        isTimeLimited = true;
+        energyDuration = settings.time;
+        resetEnergyBar();
+        startEnergyTimer();
+      } else {
+        isTimeLimited = false;
+        energyBar.style.width = '100%';
+      }
+    }
+    
+    function startTotalTimer() {
+      totalTimerInterval = setInterval(() => {
+        totalTime++;
+        updateTotalTime();
+      }, 1000);
+    }
+    
+    function updateTotalTime() {
+      const minutes = Math.floor(totalTime / 60).toString().padStart(2, '0');
+      const seconds = (totalTime % 60).toString().padStart(2, '0');
+      totalTimeElement.textContent = `${minutes}:${seconds}`;
+    }
+    
+    function resetEnergyBar() {
+      energyRemaining = 100;
+      energyBar.style.width = '100%';
+    }
+    
+    function startEnergyTimer() {
+      energyInterval = setInterval(() => {
+        energyRemaining -= (100 / energyDuration) / 10;
+        if (energyRemaining <= 0) {
+          energyRemaining = 0;
+          energyBar.style.width = '0%';
+          clearInterval(energyInterval);
+          handleTimeout();
+        } else {
+          energyBar.style.width = `${energyRemaining}%`;
+        }
+      }, 100);
+    }
+    
+    function handleTimeout() {
+      decreaseChance();
+      showCorrectAnswer();
+      triggerRareChance();
+      loadNextProblem();
+    }
+    
+    function resetEnergyTimer() {
+      if (isTimeLimited) {
+        clearInterval(energyInterval);
+        setupDifficulty();
+      }
+    }
+    
+    function updateScore() {
+      scoreElement.textContent = score;
+    }
+    
+    function updateChances() {
+      chancesElement.textContent = chances;
+      if (chances <= 0) {
+        endGame();
+      }
+    }
+    
+    function loadNextProblem() {
+      if (usedProblems.length === problems.length) {
+        usedProblems = [];
+      }
+      let problem;
+      do {
+        const randomIndex = Math.floor(Math.random() * problems.length);
+        problem = problems[randomIndex];
+      } while (usedProblems.includes(problem.id));
+      usedProblems.push(problem.id);
+      displayProblem(problem);
+    }
+    
+    function displayProblem(problem) {
+      questionElement.innerHTML = `\\(${problem.expression}\\)`;
+      generateChoices(problem);
+      MathJax.typesetPromise();
+      resetEnergyTimer();
+    }
+    
+    function generateChoices(problem) {
+      const correctAnswer = problem.answer;
+      const incorrectAnswers = generateIncorrectAnswers(correctAnswer);
+      const allChoices = [...incorrectAnswers, correctAnswer];
+      shuffleArray(allChoices);
+      choicesElement.innerHTML = '';
+      allChoices.forEach(choice => {
+        const button = document.createElement('button');
+        button.setAttribute('data-answer', choice);
+        button.innerHTML = `\\(${choice}\\)`;
+        choicesElement.appendChild(button);
+      });
+      MathJax.typesetPromise();
+    }
+    
+    function generateIncorrectAnswers(correctAnswer) {
+      const incorrect = new Set();
+      while (incorrect.size < 3) {
+        let fake;
+        if (correctAnswer.includes('\\dfrac')) {
+          const numerator = Math.floor(Math.random() * 20) - 10;
+          const denominator = Math.floor(Math.random() * 20) - 10;
+          if (denominator === 0) continue;
+          fake = `\\dfrac{${numerator}}{${denominator}}`;
+        } else if (correctAnswer.includes('-\\dfrac')) {
+          const numerator = Math.floor(Math.random() * 20) - 10;
+          const denominator = Math.floor(Math.random() * 20) - 10;
+          if (denominator === 0) continue;
+          fake = `-\\dfrac{${Math.abs(numerator)}}{${Math.abs(denominator)}}`;
+        } else if (!isNaN(correctAnswer)) {
+          fake = (parseInt(correctAnswer) + Math.floor(Math.random() * 20) - 10).toString();
+        } else {
+          fake = '0';
+        }
+        if (fake !== correctAnswer && !incorrect.has(fake)) {
+          incorrect.add(fake);
+        }
+      }
+      return Array.from(incorrect);
+    }
+    
+    function checkAnswer(selectedAnswer) {
+      clearInterval(energyInterval);
+      const currentProblemId = usedProblems[usedProblems.length -1];
+      const currentProblem = problems.find(p => p.id === currentProblemId);
+      const correctAnswer = currentProblem.answer;
+      if (selectedAnswer === correctAnswer) {
+        score += difficultySettings[selectedDifficulty].points;
+        updateScore();
+        triggerRareChance();
+        loadNextProblem();
+      } else {
+        decreaseChance();
+        showCorrectAnswer();
+        triggerRareChance();
+        loadNextProblem();
+      }
+    }
+    
+    function showCorrectAnswer() {
+      const currentProblemId = usedProblems[usedProblems.length -1];
+      const currentProblem = problems.find(p => p.id === currentProblemId);
+      popupMessage.innerHTML = `틀렸습니다. 정답은 \\(${currentProblem.answer}\\) 입니다.`;
+      openPopup();
+    }
+    
+    function decreaseChance() {
+      chances--;
+      updateChances();
+    }
+    
+    function endGame() {
+      clearInterval(energyInterval);
+      clearInterval(timerInterval);
+      clearInterval(totalTimerInterval);
+      finalScoreElement.textContent = score;
+      // 경과시간 업데이트 (최종 화면에 표시)
+      document.getElementById('final-time').textContent = totalTimeElement.textContent;
+      gameScreen.classList.add('hidden');
+      resultScreen.classList.remove('hidden');
+    }
+    
+    function shuffleArray(array) {
+      for (let i = array.length -1; i >0; i--){
+        const j = Math.floor(Math.random() * (i+1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+    
+    function openPopup() {
+      popup.classList.remove('hidden');
+      modalBg.style.display = 'block';
+      MathJax.typesetPromise();
+    }
+    
+    function closePopup() {
+      popup.classList.add('hidden');
+      modalBg.style.display = 'none';
+    }
+    
+    function triggerRareChance() {
+      const rand = Math.floor(Math.random() * 10000) + 1;
+      if (rand === 1) {
+        showPrize("5000원 상품권");
+      } else if (rand === 2) {
+        showPrize("3000원 상품권");
+      } else if (rand === 3) {
+        showPrize("1회 면제권");
+      }
+    }
+    
+    function showPrize(prize) {
+      popupMessage.innerHTML = `축하합니다! <strong>${prize}</strong>를 획득하셨습니다!`;
+      openPopup();
+    }
+    
+    // --- 서버 데이터 전송 기능 ---
+    async function saveData(game, name, score, elapsedTime) {
+      const FUNCTION_URL = "https://us-central1-record-f420d.cloudfunctions.net/report";
+      const requestData = {
+        game,
+        name,
+        score: parseInt(score, 10),
+        elapsedTime: parseInt(elapsedTime, 10)
+      };
+      try {
+        const response = await fetch(FUNCTION_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(requestData)
+        });
+        const responseData = await response.json();
+        if (response.ok) {
+          document.getElementById('response').innerText = `성공: ${JSON.stringify(responseData, null, 2)}`;
+        } else {
+          document.getElementById('response').innerText = `오류: ${JSON.stringify(responseData, null, 2)}`;
+        }
+      } catch (error) {
+        console.error('요청 실패:', error);
+        document.getElementById('response').innerText = `네트워크 오류: ${error.message}`;
+      }
+    }
+    
+    // 전송하기 버튼 클릭 시 데이터 전송
+    document.getElementById('submit-data').addEventListener('click', function() {
+      const playerName = document.getElementById('player-name').value || "익명";
+      saveData(document.title, playerName, score, totalTime);
+    });
+  </script>
+</body>
+</html>
